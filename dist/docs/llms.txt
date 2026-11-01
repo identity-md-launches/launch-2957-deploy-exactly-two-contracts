@@ -97,8 +97,6 @@ So every trade in the game grows the prize, and a bigger bid can win more. Only 
 
 The prize is recorded for the owner when the mate is played; nothing is sent inside a trade. **Payouts**, under each duel's board, shows what is yours with a Withdraw button, and rewards wait as long as you like. Anyone can call `withdraw` for an owner, but it only ever pays that owner; `withdrawTo` lets the owner send to another address. A withdrawal leaves 1 wei behind, which makes the next reward cheaper to record; the site counts it as nothing.
 
-<!-- group: Economics -->
-
 ## Fees and reward pools
 
 Every swap in a duel pays two fees:
@@ -116,20 +114,7 @@ A trade in the main duel costs 2% in fees, plus gas and price impact. Other duel
 - **Emptied only by checkmate.** A mate's prize is the only thing that leaves a pool, and it never takes more than the game paid in, so a pool never ends a game smaller than it started.
 - **Anyone can add to one** with the hook's `fundChest`. That raises what a mate against that team wins and makes that team's bids weaker, since strength is a share of the pool.
 
-## Gas
-
-| Trade | Typical gas |
-| --- | --- |
-| A trade that only bids | about 180,000 |
-| A trade that plays a move | about 530,000; usually 350,000 to 650,000 |
-
-The trade that plays a move runs the engine, so it costs more, whoever sends it. This site sends every trade with a gas limit of 5,000,000, and you pay only for the gas used.
-
-Other apps estimate gas when you confirm, and bidding can close between that estimate and the block your trade lands in; then your trade is the one that plays the move. It must have the engine's full 3,000,000 gas on hand, or it reverts with `NotEnoughGas` instead of playing a weaker move: only the gas is spent, and it can be sent again with a higher limit. Integrations should send every trade with at least 5,000,000.
-
-<!-- group: $IMDUEL -->
-
-## Token
+## $IMDUEL
 
 $IMDUEL is IMDuel's token, launched on Ethereum by the IMD swarm together with the hook.
 
@@ -142,6 +127,8 @@ $IMDUEL is IMDuel's token, launched on Ethereum by the IMD swarm together with t
 
 $IMDUEL is a team in the main duel and in every duel paired against it, and the hook fee of every duel holding $IMDUEL burns it. Tokens named IMDuel at any other address are not $IMDUEL.
 
+### Distribution
+
 | Share | Goes to |
 | --- | --- |
 | 80% | The main duel's pool, single-sided: everyone buys from it |
@@ -149,11 +136,22 @@ $IMDUEL is a team in the main duel and in every duel paired against it, and the 
 | 2% | Wallets that worked on the launch (the swarm's airdrop) |
 | 10% | The launch wallet `0x6AA3…5B23`: the team, and seeding new features and chain expansions |
 
-## Burn
+### Burn
 
 0.1% of every swap is taken in $IMDUEL wherever a duel holds $IMDUEL, the main duel included, and burned. A duel paired with $IMD that holds no $IMDUEL takes its 0.1% in $IMD and adds it to the main duel's $IMD reward pool instead.
 
 The burn is owed to `0x…dEaD` in the hook and sent there by anyone calling `withdraw(0x…dEaD, IMDUEL)`. The main duel's page shows the total burned.
+
+## Gas
+
+| Trade | Typical gas |
+| --- | --- |
+| A trade that only bids | about 180,000 |
+| A trade that plays a move | about 530,000; usually 350,000 to 650,000 |
+
+The trade that plays a move runs the engine, so it costs more, whoever sends it. This site sends every trade with a gas limit of 5,000,000, and you pay only for the gas used.
+
+Other apps estimate gas when you confirm, and bidding can close between that estimate and the block your trade lands in; then your trade is the one that plays the move. It must have the engine's full 3,000,000 gas on hand, or it reverts with `NotEnoughGas` instead of playing a weaker move: only the gas is spent, and it can be sent again with a higher limit. Integrations should send every trade with at least 5,000,000.
 
 <!-- group: Guides -->
 
@@ -187,7 +185,7 @@ Every address has a profile at `#/profile/0x…`: press an address anywhere on t
 
 The [Leaderboard](#/leaderboard) ranks every main-duel player by badges, checkmates, moves, pieces taken or games. Badges are computed from the hook's counts and are not minted. Only the main duel counts.
 
-<!-- group: Developers -->
+<!-- group: Reference -->
 
 ## Contracts
 
@@ -226,8 +224,6 @@ hookData = abi.encode(owner)         // 32 bytes
 | `MATE_SHARE_BPS`, `PAYOUT_CAP`, `MATE_INFLOW_CAP` | the prize's three limits: 2,500 (a quarter), 2 (twice the bid), 1 (the game's pay-in) |
 
 Events: `GameStarted`, `Bid`, `Moved`, `MatePaid`, `GameOver`, `DrawTriggered`, `EngineFailed`, `Withdrawn`, `ChestFunded`, `MainDuel`, `HookSwap`.
-
-<!-- group: Security -->
 
 ## Security and risks
 

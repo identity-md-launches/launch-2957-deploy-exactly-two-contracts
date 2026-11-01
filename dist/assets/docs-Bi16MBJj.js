@@ -1,4 +1,4 @@
-import{a as e,c as t,l as n,n as r,s as i}from"./controls-BHCuqmWb.js";import{F as a,Y as o}from"./discovery-MWoTMWRX.js";/* empty css                 */import{t as s}from"./page-title-B-6VmzfP.js";import{t as c}from"./chessboard-DaF97l0s.js";function l(n,a){let o=i`${n.toc.map(t=>i`<p class="label docs-group">${t.group}</p><ul>${t.sections.map(t=>i`<li><a class="${e(`docs-link`,{"is-on":t.id===a})}" href="#/docs/${t.id}" data-docs-link="${t.id}">${t.title}</a></li>`)}</ul>`)}`;return i`<div class="docs">
+import{a as e,c as t,l as n,n as r,s as i}from"./controls-BHCuqmWb.js";import{F as a,Y as o}from"./discovery-MWoTMWRX.js";/* empty css                 */import{t as s}from"./page-title-B-6VmzfP.js";import{t as c}from"./chessboard-BwbTKU-c.js";function l(n,a){let o=i`${n.toc.map(t=>i`<p class="label docs-group">${t.group}</p><ul>${t.sections.map(t=>i`<li><a class="${e(`docs-link`,{"is-on":t.id===a})}" href="#/docs/${t.id}" data-docs-link="${t.id}">${t.title}</a></li>`)}</ul>`)}`;return i`<div class="docs">
     <nav class="docs-nav" aria-label="Contents"><details class="docs-contents" open data-docs-contents><summary class="label">Contents</summary>${o}</details></nav>
     <article class="docs-body">
       <div class="docs-tools">${r({label:`Copy page as Markdown`,size:`sm`,data:{"docs-copy":``}})}<a class="text-link" href="docs/llms.txt" target="_blank" rel="noopener">llms.txt</a></div>
@@ -118,26 +118,7 @@ import{a as e,c as t,l as n,n as r,s as i}from"./controls-BHCuqmWb.js";import{F 
 <li><strong>Emptied only by checkmate.</strong> A mate&#39;s prize is the only thing that leaves a pool, and it never takes more than the game paid in, so a pool never ends a game smaller than it started.</li>
 <li><strong>Anyone can add to one</strong> with the hook&#39;s <code>fundChest</code>. That raises what a mate against that team wins and makes that team&#39;s bids weaker, since strength is a share of the pool.</li>
 </ul>
-<h2 id="gas"><a class="docs-anchor" href="#/docs/gas" aria-label="Link to this section">#</a>Gas</h2>
-<table>
-<thead>
-<tr>
-<th>Trade</th>
-<th>Typical gas</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>A trade that only bids</td>
-<td>about 180,000</td>
-</tr>
-<tr>
-<td>A trade that plays a move</td>
-<td>about 530,000; usually 350,000 to 650,000</td>
-</tr>
-</tbody></table>
-<p>The trade that plays a move runs the engine, so it costs more, whoever sends it. This site sends every trade with a gas limit of 5,000,000, and you pay only for the gas used.</p>
-<p>Other apps estimate gas when you confirm, and bidding can close between that estimate and the block your trade lands in; then your trade is the one that plays the move. It must have the engine&#39;s full 3,000,000 gas on hand, or it reverts with <code>NotEnoughGas</code> instead of playing a weaker move: only the gas is spent, and it can be sent again with a higher limit. Integrations should send every trade with at least 5,000,000.</p>
-<h2 id="token"><a class="docs-anchor" href="#/docs/token" aria-label="Link to this section">#</a>Token</h2>
+<h2 id="imduel"><a class="docs-anchor" href="#/docs/imduel" aria-label="Link to this section">#</a>$IMDUEL</h2>
 <p>$IMDUEL is IMDuel&#39;s token, launched on Ethereum by the IMD swarm together with the hook.</p>
 <table>
 <thead>
@@ -164,6 +145,7 @@ import{a as e,c as t,l as n,n as r,s as i}from"./controls-BHCuqmWb.js";import{F 
 </tr>
 </tbody></table>
 <p>$IMDUEL is a team in the main duel and in every duel paired against it, and the hook fee of every duel holding $IMDUEL burns it. Tokens named IMDuel at any other address are not $IMDUEL.</p>
+<h3 id="distribution"><a class="docs-anchor" href="#/docs/distribution" aria-label="Link to this section">#</a>Distribution</h3>
 <table>
 <thead>
 <tr>
@@ -188,9 +170,28 @@ import{a as e,c as t,l as n,n as r,s as i}from"./controls-BHCuqmWb.js";import{F 
 <td>The launch wallet <code>0x6AA3…5B23</code>: the team, and seeding new features and chain expansions</td>
 </tr>
 </tbody></table>
-<h2 id="burn"><a class="docs-anchor" href="#/docs/burn" aria-label="Link to this section">#</a>Burn</h2>
+<h3 id="burn"><a class="docs-anchor" href="#/docs/burn" aria-label="Link to this section">#</a>Burn</h3>
 <p>0.1% of every swap is taken in $IMDUEL wherever a duel holds $IMDUEL, the main duel included, and burned. A duel paired with $IMD that holds no $IMDUEL takes its 0.1% in $IMD and adds it to the main duel&#39;s $IMD reward pool instead.</p>
 <p>The burn is owed to <code>0x…dEaD</code> in the hook and sent there by anyone calling <code>withdraw(0x…dEaD, IMDUEL)</code>. The main duel&#39;s page shows the total burned.</p>
+<h2 id="gas"><a class="docs-anchor" href="#/docs/gas" aria-label="Link to this section">#</a>Gas</h2>
+<table>
+<thead>
+<tr>
+<th>Trade</th>
+<th>Typical gas</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A trade that only bids</td>
+<td>about 180,000</td>
+</tr>
+<tr>
+<td>A trade that plays a move</td>
+<td>about 530,000; usually 350,000 to 650,000</td>
+</tr>
+</tbody></table>
+<p>The trade that plays a move runs the engine, so it costs more, whoever sends it. This site sends every trade with a gas limit of 5,000,000, and you pay only for the gas used.</p>
+<p>Other apps estimate gas when you confirm, and bidding can close between that estimate and the block your trade lands in; then your trade is the one that plays the move. It must have the engine&#39;s full 3,000,000 gas on hand, or it reverts with <code>NotEnoughGas</code> instead of playing a weaker move: only the gas is spent, and it can be sent again with a higher limit. Integrations should send every trade with at least 5,000,000.</p>
 <h2 id="trading"><a class="docs-anchor" href="#/docs/trading" aria-label="Link to this section">#</a>Trading</h2>
 <p>The site trades through Uniswap&#39;s own contracts, the Universal Router and Permit2.</p>
 <ol>
@@ -406,8 +407,6 @@ So every trade in the game grows the prize, and a bigger bid can win more. Only 
 
 The prize is recorded for the owner when the mate is played; nothing is sent inside a trade. **Payouts**, under each duel's board, shows what is yours with a Withdraw button, and rewards wait as long as you like. Anyone can call \`withdraw\` for an owner, but it only ever pays that owner; \`withdrawTo\` lets the owner send to another address. A withdrawal leaves 1 wei behind, which makes the next reward cheaper to record; the site counts it as nothing.
 
-<!-- group: Economics -->
-
 ## Fees and reward pools
 
 Every swap in a duel pays two fees:
@@ -425,20 +424,7 @@ A trade in the main duel costs 2% in fees, plus gas and price impact. Other duel
 - **Emptied only by checkmate.** A mate's prize is the only thing that leaves a pool, and it never takes more than the game paid in, so a pool never ends a game smaller than it started.
 - **Anyone can add to one** with the hook's \`fundChest\`. That raises what a mate against that team wins and makes that team's bids weaker, since strength is a share of the pool.
 
-## Gas
-
-| Trade | Typical gas |
-| --- | --- |
-| A trade that only bids | about 180,000 |
-| A trade that plays a move | about 530,000; usually 350,000 to 650,000 |
-
-The trade that plays a move runs the engine, so it costs more, whoever sends it. This site sends every trade with a gas limit of 5,000,000, and you pay only for the gas used.
-
-Other apps estimate gas when you confirm, and bidding can close between that estimate and the block your trade lands in; then your trade is the one that plays the move. It must have the engine's full 3,000,000 gas on hand, or it reverts with \`NotEnoughGas\` instead of playing a weaker move: only the gas is spent, and it can be sent again with a higher limit. Integrations should send every trade with at least 5,000,000.
-
-<!-- group: $IMDUEL -->
-
-## Token
+## $IMDUEL
 
 $IMDUEL is IMDuel's token, launched on Ethereum by the IMD swarm together with the hook.
 
@@ -451,6 +437,8 @@ $IMDUEL is IMDuel's token, launched on Ethereum by the IMD swarm together with t
 
 $IMDUEL is a team in the main duel and in every duel paired against it, and the hook fee of every duel holding $IMDUEL burns it. Tokens named IMDuel at any other address are not $IMDUEL.
 
+### Distribution
+
 | Share | Goes to |
 | --- | --- |
 | 80% | The main duel's pool, single-sided: everyone buys from it |
@@ -458,11 +446,22 @@ $IMDUEL is a team in the main duel and in every duel paired against it, and the 
 | 2% | Wallets that worked on the launch (the swarm's airdrop) |
 | 10% | The launch wallet \`0x6AA3…5B23\`: the team, and seeding new features and chain expansions |
 
-## Burn
+### Burn
 
 0.1% of every swap is taken in $IMDUEL wherever a duel holds $IMDUEL, the main duel included, and burned. A duel paired with $IMD that holds no $IMDUEL takes its 0.1% in $IMD and adds it to the main duel's $IMD reward pool instead.
 
 The burn is owed to \`0x…dEaD\` in the hook and sent there by anyone calling \`withdraw(0x…dEaD, IMDUEL)\`. The main duel's page shows the total burned.
+
+## Gas
+
+| Trade | Typical gas |
+| --- | --- |
+| A trade that only bids | about 180,000 |
+| A trade that plays a move | about 530,000; usually 350,000 to 650,000 |
+
+The trade that plays a move runs the engine, so it costs more, whoever sends it. This site sends every trade with a gas limit of 5,000,000, and you pay only for the gas used.
+
+Other apps estimate gas when you confirm, and bidding can close between that estimate and the block your trade lands in; then your trade is the one that plays the move. It must have the engine's full 3,000,000 gas on hand, or it reverts with \`NotEnoughGas\` instead of playing a weaker move: only the gas is spent, and it can be sent again with a higher limit. Integrations should send every trade with at least 5,000,000.
 
 <!-- group: Guides -->
 
@@ -496,7 +495,7 @@ Every address has a profile at \`#/profile/0x…\`: press an address anywhere on
 
 The [Leaderboard](#/leaderboard) ranks every main-duel player by badges, checkmates, moves, pieces taken or games. Badges are computed from the hook's counts and are not minted. Only the main duel counts.
 
-<!-- group: Developers -->
+<!-- group: Reference -->
 
 ## Contracts
 
@@ -536,8 +535,6 @@ hookData = abi.encode(owner)         // 32 bytes
 
 Events: \`GameStarted\`, \`Bid\`, \`Moved\`, \`MatePaid\`, \`GameOver\`, \`DrawTriggered\`, \`EngineFailed\`, \`Withdrawn\`, \`ChestFunded\`, \`MainDuel\`, \`HookSwap\`.
 
-<!-- group: Security -->
-
 ## Security and risks
 
 **Audits and testing.**
@@ -556,5 +553,5 @@ Events: \`GameStarted\`, \`Bid\`, \`Moved\`, \`MatePaid\`, \`GameOver\`, \`DrawT
 - **Quiet duels.** A move must be played within about a day (8,191 blocks) of its window closing, while its block hash is still on chain. After that it is drawn again, owned by nobody, at its bid's strength.
 - **Throwing games.** A team can lose on purpose, but every move costs fees and the prize comes out of its own pool, so it loses money doing it.
 - **Relayed trades.** A trade relayed for a smart-contract wallet without the owner in \`hookData\` credits the wallet that signed it.
-`,toc:[{group:`Overview`,sections:[{id:`introduction`,title:`Introduction`,sub:[]},{id:`quick-start`,title:`Quick start`,sub:[]}]},{group:`How it works`,sections:[{id:`how-a-game-works`,title:`How a game works`,sub:[{id:`teams`,title:`Teams`},{id:`bidding`,title:`Bidding`},{id:`playing-the-move`,title:`Playing the move`},{id:`game-end`,title:`Game end`}]},{id:`strength`,title:`Strength`,sub:[]},{id:`checkmate-rewards`,title:`Checkmate rewards`,sub:[{id:`withdrawing`,title:`Withdrawing`}]}]},{group:`Economics`,sections:[{id:`fees-and-reward-pools`,title:`Fees and reward pools`,sub:[]},{id:`gas`,title:`Gas`,sub:[]}]},{group:`$IMDUEL`,sections:[{id:`token`,title:`Token`,sub:[]},{id:`burn`,title:`Burn`,sub:[]}]},{group:`Guides`,sections:[{id:`trading`,title:`Trading`,sub:[]},{id:`creating-a-duel`,title:`Creating a duel`,sub:[]},{id:`profiles-and-leaderboard`,title:`Profiles and leaderboard`,sub:[]}]},{group:`Developers`,sections:[{id:`contracts`,title:`Contracts`,sub:[]},{id:`integrating`,title:`Integrating`,sub:[]}]},{group:`Security`,sections:[{id:`security-and-risks`,title:`Security and risks`,sub:[]}]}]},h=(e,t)=>{let a=t.params.section;n(e,i`<div class="overview wrap">${s(`Docs`,{href:`#/`,label:`Home`},{lede:`How IMDuel works: the game, the money, the site and the contracts.`,end:r({label:`Find a duel`,href:`#/duels`,tone:`ink`,size:`sm`}),className:`overview-title`})}
+`,toc:[{group:`Overview`,sections:[{id:`introduction`,title:`Introduction`,sub:[]},{id:`quick-start`,title:`Quick start`,sub:[]}]},{group:`How it works`,sections:[{id:`how-a-game-works`,title:`How a game works`,sub:[{id:`teams`,title:`Teams`},{id:`bidding`,title:`Bidding`},{id:`playing-the-move`,title:`Playing the move`},{id:`game-end`,title:`Game end`}]},{id:`strength`,title:`Strength`,sub:[]},{id:`checkmate-rewards`,title:`Checkmate rewards`,sub:[{id:`withdrawing`,title:`Withdrawing`}]},{id:`fees-and-reward-pools`,title:`Fees and reward pools`,sub:[]},{id:`imduel`,title:`$IMDUEL`,sub:[{id:`distribution`,title:`Distribution`},{id:`burn`,title:`Burn`}]},{id:`gas`,title:`Gas`,sub:[]}]},{group:`Guides`,sections:[{id:`trading`,title:`Trading`,sub:[]},{id:`creating-a-duel`,title:`Creating a duel`,sub:[]},{id:`profiles-and-leaderboard`,title:`Profiles and leaderboard`,sub:[]}]},{group:`Reference`,sections:[{id:`contracts`,title:`Contracts`,sub:[]},{id:`integrating`,title:`Integrating`,sub:[]},{id:`security-and-risks`,title:`Security and risks`,sub:[]}]}]},h=(e,t)=>{let a=t.params.section;n(e,i`<div class="overview wrap">${s(`Docs`,{href:`#/`,label:`Home`},{lede:`How IMDuel works: the game, the money, the site and the contracts.`,end:r({label:`Find a duel`,href:`#/duels`,tone:`ink`,size:`sm`}),className:`overview-title`})}
     ${l(m,a)}</div>`);let o=e.querySelector(`[data-walkthrough]`);o&&n(o,f());let c=o?p(o.querySelector(`.walkthrough`)):void 0,d=u(e,m,a);return()=>{d(),c?.()}};export{h as default};
