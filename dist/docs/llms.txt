@@ -1,0 +1,262 @@
+# IMDuel docs
+
+<!-- group: Start -->
+
+## What IMDuel is
+
+IMDuel is chess played by trades. Each duel is a Uniswap v4 pool of two tokens, and the two tokens are the teams. Buying a token bids for its team's next move. An onchain engine plays the pieces; the trades decide how strongly it plays and who gets paid when it mates.
+
+- The main duel is **IMDUEL / IMD**. Anyone can open a duel of any token against IMD or IMDUEL.
+- Every swap in a duel pays a 0.75% fee into the game: most of it fills the two teams' reward pools.
+- Checkmate pays the owner of the mating move what that game paid into the losing team's reward pool, in the loser's token: at most a quarter of it and 2x the bid.
+- There is no owner, admin key, pause or upgrade. The rules are the contracts.
+
+A bigger trade plays a stronger move. It does not guarantee a mate, a win or a profit, and token prices move. Trade only what you can lose.
+
+## Quick start
+
+1. **Connect.** Press Connect in the header and pick your wallet. You need ETH for gas and the token you pay with: in IMDUEL / IMD, IMD buys IMDUEL and IMDUEL buys IMD.
+2. **Pick a duel.** Open [Duels](#/duels) and choose one. The board shows the live game, whose move it is, both teams' reward pools and what a checkmate pays now.
+3. **Buy for a team.** In the Trade panel, choose the team you back and an amount. Buying its token bids for its next move. The panel shows whether your buy takes the top bid and how strong the move would be.
+4. **Watch the move.** When the bidding window closes, the move is fixed. The next trade in the pool plays it. If it mates, the prize is recorded for the owner to claim.
+5. **Check your activity.** Press your address in the header for your bids, your moves and what you won.
+
+<!-- group: Play -->
+
+## How a move works
+
+<div data-walkthrough></div>
+
+### Every buy bids
+
+A buy of a team's token is a bid for that team's next move that isn't fixed yet: the move being decided, if it is that team's turn, otherwise the team's following move. Size doesn't matter for taking part; there is no minimum. It doesn't matter which app or aggregator sends the trade. If the game ends before a bid's move comes up, the bid owns its team's first move of the next game.
+
+The biggest bid owns the move. To take the top spot, a buy must pay more than 10% over the current top bid. Smaller buys just trade. Both teams' top bids are public onchain, and the Trade panel shows the amount to beat.
+
+### The bidding window
+
+A move takes bids for 3 blocks after the previous move is played: about 36 seconds on Ethereum. If a window passes with no bid, the first bid that comes opens a new 3-block window, so the team can answer it.
+
+### The dice
+
+When the window closes, the hash of its last block seeds the engine. That hash didn't exist while anyone could still bid, so nobody can see the move a bid will play and choose it. Once that block is mined the move is fixed, and the site shows it before it is played.
+
+### Who plays the move
+
+The first trade after the window plays the move, from either team, of any size. Who plays it and when doesn't change it. That trade also pays the engine's gas (see [Gas](#/docs/gas)).
+
+### Timeouts
+
+If the side to move gets no bid for 10 minutes, a trade by the other team opens that move at 0% strength, for nobody. A real bid in the same block takes it over. A timeout move that mates pays nobody.
+
+A move whose block hash the chain no longer serves (after 8,191 blocks, about a day) is played at its bid's strength for nobody, so letting a move expire never helps the bidder.
+
+## Strength
+
+A move's strength comes from what the owning trade received, as a share of its own team's reward pool, read when it bids. It reads no liquidity and no price, so nobody can move it except by putting money into the reward pool, and that money goes to the game's winners. An empty reward pool has nothing to measure against and plays at the cap, so at launch, and after every mate, most moves play strong until the reward pool has grown.
+
+| Share of the team's reward pool | Strength |
+| --- | --- |
+| 0.1% or less | 0% |
+| 1% | 30% |
+| 10% | 60% |
+| The whole reward pool or more | 90% (the cap) |
+
+Strength sets how hard the engine looks. At 0% it plays like a beginner who still notices captures and checks. Near the cap it plays like a strong amateur. Every strength keeps some seeded mistakes, more at low strength, so games stay human: even a whale's move can miss a mate.
+
+### The engine
+
+The engine runs onchain, inside the trade that plays the move. It scores every legal move for material, position, pressure on the enemy king and the risk it leaves; captures and checks always catch its eye. Higher strength takes more second looks at the leading move. Against a lone king it converts at full effort. The longer a game goes without a capture or pawn move, the more it pushes for progress.
+
+## The prize
+
+Checkmate wins the jackpot. The move that mates wins what that game's trades paid into the losing team's reward pool, at most a quarter of that reward pool as it stands when the move is played, and the prize is recorded for the move's owner in the loser's token. Captures, checks and quiet moves pay nothing: the reward pools grow between mates, through draws and timeouts, so a mate is worth about a game's worth of fees.
+
+- **The winner takes from the loser.** Buying IMDUEL and mating wins IMD; buying IMD and mating wins IMDUEL. The winning team's own reward pool is untouched.
+- **The caps.** The prize is at most 2x what the mating bid paid, and at most what that game's trades paid into the losing reward pool (donations don't count). Every trade puts half its reward pool fee into each reward pool, so any game that saw trading pays. To take a full quarter, a bid must pay at least an eighth of the loser's reward pool, in a game that paid at least a quarter of it in reward pool fees. A game played for dust pays nothing. The rest stays in the reward pool.
+- **Only the owner.** Only the top bid when the window closed is paid. Outbid trades earn nothing, and a timeout move pays nobody.
+- **The owner is the wallet behind the trade.** Trading here names you. A trade through Uniswap's own app or an aggregator belongs to the wallet that signed it. See Trade from code.
+- **Claimed, not pushed.** When the mate is played, the prize is recorded for the owner; nothing is sent inside anyone's trade. Claim it under the duel's board, in Payouts, or with `withdraw` from any wallet (it only ever pays the owner); `withdrawTo` sends it to another address of the owner's choosing. Prizes wait as long as you like.
+- **Bots are welcome.** A mate in one is visible to everyone, so the mating move is a race for the last bid in the window, and the site shows a mate on the board to everyone. Every bid for it is a buy of at least half the prize.
+
+The owner is the address the trade names: the site always sends yours. A trade sent without one (another app or an aggregator) names the wallet that signed it.
+
+## Games and draws
+
+A game ends by checkmate or a draw. Then the board resets, colours swap and a new game starts with the next trade. The reward pools carry over between games.
+
+The draws are automatic:
+
+- stalemate;
+- too few pieces to mate (two kings, or a king and one knight or bishop against a king);
+- the third time a position appears, counting it and the positions up to sixteen half-moves earlier (the start position counts from any distance);
+- 60 half-moves without a capture or pawn move;
+- 200 half-moves in total;
+- the engine failing to answer on a position, twice (it never has).
+
+A draw pays nothing: the reward pools wait for the next mate.
+
+In the first game the team of the token people buy plays White: in the main duel, IMDUEL. Colours alternate after that.
+
+<!-- group: Money -->
+
+## Fees
+
+Every swap in a duel pays:
+
+- **The duel fee: 0.75%.** 0.65% fills the reward pools and 0.1% is the protocol slice, which burns IMDUEL (see [IMDUEL](#/docs/imduel)). There is no opening fee and no other charge: a trade in the main duel costs 2% in all before gas and price impact.
+- **The pool fee.** It goes to the pool's liquidity. In the main duel it is 1.25%: 1% to the launch wallet and 0.25% to the IMD network. Other duels use the fee their creator chose.
+- **Gas.** See [Gas](#/docs/gas).
+
+Every swap the hook takes a fee from also emits the standard `HookSwap` event with that fee, so explorers and indexers count what you really paid (a dust swap whose fee rounds to nothing emits none).
+
+## Reward pools
+
+Each duel has two reward pools, one per team, each in its team's token.
+
+- The 0.65% share of every swap fills both reward pools: half from what the trade pays into that token's reward pool, half from what it buys into the other. Every trade feeds both by about the same value, so they stay balanced.
+- A duel against IMD adds its slice, in IMD, to the main duel's IMD reward pool.
+- Anyone can add to a duel's reward pool with the hook's `fundChest`. It raises what the other team wins by mating that team and, since strength is a share of the reward pool, makes that team's ordinary bids weaker.
+- Nothing else takes from a reward pool: only a checkmate's prize leaves it, and never more than a quarter at a time.
+
+## IMDUEL
+
+IMDUEL is the main duel's token. The IMD swarm launches it together with the hook, paired with IMD.
+
+### Supply
+
+1,000,000,000 IMDUEL, fixed, with plain transfers. At launch:
+
+| Share | Goes to |
+| --- | --- |
+| 80% | The pool, single-sided: everyone buys from it |
+| 8% | IMD seats connected at launch, shared equally (the swarm's airdrop) |
+| 2% | Wallets that work on the launch (the swarm's airdrop) |
+| 10% | The launch wallet `0x6AA3…5B23`, unlocked: 5% the team, 5% reserved for the Robinhood Chain duel |
+
+### Burn
+
+The 0.1% slice is taken without any swap. Wherever a duel holds IMDUEL (the main duel always), it is taken in IMDUEL and burned. A duel against IMD takes its slice in IMD, into the main duel's IMD reward pool. The burn is owed to `0x…dEaD` and anyone can send it with the hook's `withdraw(0x…dEaD, IMDUEL)`. The hook reads no prices, so no trade can move what it does.
+
+## Gas
+
+| Trade | Typical gas |
+| --- | --- |
+| A plain trade | about 180,000 |
+| A trade that plays a move | about 530,000; usually 350,000 to 650,000, rare positions more |
+
+The trade that plays a move runs the engine, so it costs more, whoever sends it. This site sends every trade with a gas limit of 5,000,000; you only pay for the gas used. Other apps estimate gas when you confirm: if a window closes between that estimate and the block your trade lands in, the trade has to play the move and can run out of gas. It then reverts with `NotEnoughGas` rather than play a weaker move; only the gas is spent, send it again with a higher limit.
+
+<!-- group: Using the site -->
+
+## Trading
+
+The site trades through Uniswap's own contracts: the Universal Router and Permit2.
+
+1. **Approve, once per token.** A transaction that lets Permit2 move that token.
+2. **Sign a permit.** No gas. It gives the router a limited allowance for this amount, for a short time. Skipped while an earlier allowance still covers the trade.
+3. **Send the trade.** One transaction; the permit travels inside it.
+
+**Slippage.** Auto allows 0.5% plus the largest price move seen within a block in this pool lately, at most 5%. Bids for the same move buy the same token, so trades earlier in your block move your price. Whatever you allow is also what a bot trading around yours could take.
+
+## Liquidity
+
+The Pool switch on a duel's panel adds liquidity to its Uniswap pool. Liquidity earns the pool fee, shared by size; the 0.75% duel fee is separate and goes to the game. The position is a Uniswap position NFT in your wallet. Liquidity has no effect on anyone's strength or prize.
+
+## Your profile
+
+The wallet drawer's Profile key opens `#/profile/0x…`: the counts the hook keeps for an address in the main duel (games, checkmates, moves by piece, pieces taken, checks, castles, promotions, moves at full strength, the rare ones, the amounts won) and the badges they earn. Any address can be looked up; press one anywhere on the site to open its profile, or rest on it for a card. Side duels count nothing.
+
+The [Leaderboard](#/leaderboard) ranks every player of the main duel by badges, checkmates, moves, pieces taken or games. Badges are computed from the hook's counts and are not minted.
+
+## Create a duel
+
+[Create a duel](#/create) for any ERC-20, or ETH, against IMD or IMDUEL. It is free: you pay gas and the initial liquidity, which stays yours.
+
+- Pick the token, the pair and the pool fee.
+- Set the initial deposits: they set the opening price.
+- If that exact pool already exists, the site opens it instead.
+
+A new duel pays the same fee from its first trade. It must pair with IMD or IMDUEL, so its slice has a main duel reward pool to go to; the hook refuses any other pair.
+
+## Withdraw
+
+A prize is recorded for its owner when the mate is played, never sent inside a trade. Payouts, under the duel's board, shows what is yours with a Withdraw key. Anyone can trigger a withdrawal, but it only ever pays the owner; `withdrawTo` lets the owner name another address. A claim leaves 1 wei behind on purpose (it makes your next prize cheaper to record); the site treats it as nothing.
+
+<!-- group: Build -->
+
+## Contracts
+
+| Contract | Address |
+| --- | --- |
+| IMDuelHook | [`0xA92F72DcDd90229C32F6d51229F4cc5c916410CC`](https://etherscan.io/address/0xA92F72DcDd90229C32F6d51229F4cc5c916410CC) |
+| ChessEngineV5 | [`0xc21788F704a8b9456f7391A01d8a3D95Be215a27`](https://etherscan.io/address/0xc21788F704a8b9456f7391A01d8a3D95Be215a27) |
+| IMDUEL | [`0xc012b8Db13C57beCd950eEfB70540e6f973A3C73`](https://etherscan.io/address/0xc012b8Db13C57beCd950eEfB70540e6f973A3C73) |
+| Main duel (pool id) | `0xbb45eacf50b4bd8ce31e0620e14ff6e6b6375d56fce4372d3046f4a02faeae65` |
+| Launch | IMD launch 2843, [job 4098dafa](https://explorer.imd.fun/jobs/4098dafa-99b4-4c9f-97e3-430b49ea6afa), block 26,322,077 |
+| Swarm audits | [74895075](https://explorer.imd.fun/jobs/74895075-9f30-49e2-8c89-ec79383f8102) (this code: 1 low fixed, 1 info documented), [6acefe89](https://explorer.imd.fun/jobs/6acefe89-1311-462a-8f78-5697050c327d) (earlier version, every finding fixed) |
+| Launch wallet (10% team supply: 5% the team, 5% reserved for the Robinhood Chain duel; 1% pool fee) | `0x6AA302EFf055259c9Cf177f33Ae3cBA5d4135B23` |
+
+The source as deployed: [the swarm's launch repository](https://github.com/identity-md-launches/launch-2843-launch-imduel-imduel-launch-json). The hook takes no admin calls; the engine holds no state and no funds.
+
+IMD launch 2666 (hook `0x306d011c30094d1098BFD43b105B015Fb9AB10CC`, token `0xbe481aE624F87f0e991d4481CF6B3ABD3278d29e`) was the rehearsal: its hook paid nobody for a trade that didn't name an owner, so it was redone. That token is not IMDUEL.
+
+## Read a duel
+
+A duel is identified by its Uniswap pool ID.
+
+| Read | Returns |
+| --- | --- |
+| `game(poolId)` | the board, the side to move, both top bids, the bidding window and the last move |
+| `chest(poolId, team)` | a team's reward pool (team 0 is `currency0`'s) |
+| `previewMove(poolId, hash)` | the move a closed window will play, given its last block's hash |
+| `owed(owner, currencyId)` | prizes waiting to be claimed |
+| `MATE_SHARE_BPS`, `PAYOUT_CAP`, `MATE_INFLOW_CAP` | the mate's share of the loser's reward pool (2,500: a quarter) and its caps (2x what the bid paid, 1x what that game's trades paid into the losing reward pool) |
+| `gameInflow(poolId, gameNo)` | what a game's trading paid into each reward pool |
+| `stats(address)` | a player's counts in the main duel, two packed words (moves by piece, captures, checks, mates, games, amounts won; for badges and display only; side duels count nothing) |
+| `players(i)`, `playerCount()` | every address that has owned a played move in the main duel |
+
+Events: `GameStarted`, `Bid`, `Moved`, `MatePaid`, `GameOver`, `DrawTriggered`, `EngineFailed`, `Withdrawn`, `ChestFunded`, `MainDuel`, `HookSwap`.
+
+## Trade from code
+
+Any router or aggregator can trade a duel; every buy bids. The owner is the address in `hookData`, 20 bytes packed or 32 bytes ABI-encoded; without one it is the wallet that signed the transaction, so a trade from Uniswap's app or an aggregator earns too. Pass it for a smart-contract wallet or a relayed trade, where the signer is not the trader.
+
+```
+hookData = abi.encodePacked(owner)   // 20 bytes
+hookData = abi.encode(owner)         // 32 bytes
+```
+
+Send every trade with a gas limit of at least 5,000,000: a trade that plays a move must have the engine's full 3,000,000 cap on hand when it calls it, or it reverts with `NotEnoughGas`. Unused gas isn't charged. A window can close between your estimate and your block, and the first trade after it plays the move.
+
+<!-- group: Trust -->
+
+## Security
+
+- No owner, admin, pause or upgrade path. The hook and the engine are immutable.
+- The books are checked by invariant tests and symbolic proofs: what the hook holds equals the reward pools, the burn owed and what is owed, in every currency, and a mate takes exactly the smallest of a quarter of the loser's reward pool, twice what the bid paid and what that game paid into the losing reward pool; the invariant runs queue mates, so payouts are checked in every run.
+- Audited by the IMD swarm twice (see [Contracts](#/docs/contracts)) and checked by our own reviews, fuzzing (Foundry and Echidna) and a launch rehearsed on a fork of Ethereum.
+- An engine failure never breaks a trade: a seeded legal move plays at 0% instead, and if that fails too the game ends as a draw and a new one starts.
+- A hostile token in one duel can only affect that duel.
+
+## Known limits
+
+- **Block builders.** Whoever builds a window's last block can bid in it and try versions of it, keeping the hash whose move pays. It is worth it only for a large prize, and a mate pays at most 2x what the bid paid.
+- **Reorganisations.** A move is fixed once its window's last block is in. If the chain replaced that block (rare on Ethereum), the move would change with it.
+- **The last block.** A raise in a window's last block can't be answered (a move's first bid there opens a new window). A mate in one is visible to anyone running an engine, so bots bid for it late; their bids are buys.
+- **Empty reward pools.** Strength is a share of the reward pool, so while a reward pool is small every bid plays near the cap, and a big donation to a reward pool makes that team's ordinary bids weaker.
+- **Throwing games.** A team can lose on purpose, but every move costs fees and the prize comes out of its own reward pool, so it loses money doing it.
+- **Owner without hookData.** A trade relayed for a smart-contract wallet without the owner in `hookData` credits the wallet that signed the transaction, not the trader.
+
+## Glossary
+
+| Term | Meaning |
+| --- | --- |
+| Duel | A Uniswap v4 pool on the IMDuel hook; its two tokens are the teams |
+| Top bid | The biggest buy for a team's next move; it owns the move |
+| Owner | The address the top bid named; it receives the prize if its move mates |
+| Window | The blocks a move takes bids for |
+| Strength | How hard the engine looks, from the bid's share of its team's reward pool |
+| Reward pool | A team's prize money, in its token; a checkmate against the team takes up to a quarter of it |
+| Timeout move | A 0% move for nobody after 10 minutes without a bid |
+| Slice | The 0.1% of every swap: in IMDUEL, burned; in a duel against IMD, IMD to the main duel's IMD reward pool |

@@ -1,0 +1,13 @@
+{
+  "name": "IMDuel",
+  "short_name": "IMDuel",
+  "description": "A Uniswap v4 hook that plays chess.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#efe9de",
+  "theme_color": "#efe9de",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

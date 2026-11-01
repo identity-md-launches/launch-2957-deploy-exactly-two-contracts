@@ -1,0 +1,1 @@
+import{s as e}from"./controls-BHCuqmWb.js";var t=()=>e`<span class="skeleton-line" aria-hidden="true"></span>`;export{t};
