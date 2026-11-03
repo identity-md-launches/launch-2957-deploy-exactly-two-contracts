@@ -1,34 +1,24 @@
 {
-  "kind": "univ4_hook",
-  "hook": {
-    "contract": "IMDuelHook",
-    "constructorArgs": [
-      "$poolManager",
-      "0xc21788f704a8b9456f7391a01d8a3d95be215a27",
-      "0xd34a99bc0f67ae1bbd63c660e6d0b0dd03e263b7",
-      "3"
-    ],
-    "permissions": [
-      "afterInitialize",
-      "beforeSwap",
-      "afterSwap",
-      "beforeSwapReturnDelta",
-      "afterSwapReturnDelta"
-    ]
-  },
-  "token": {
-    "contract": "IMDuelToken",
-    "constructorArgs": [],
-    "name": "IMDuel",
-    "symbol": "IMDUEL",
-    "decimals": 18,
-    "totalSupply": "1000000000000000000000000000"
-  },
-  "pool": {
-    "pairedCurrency": "0xd34a99bc0f67ae1bbd63c660e6d0b0dd03e263b7",
-    "fee": 12500,
-    "tickSpacing": 60,
-    "initialPrice": "79228162514264337593543950336"
-  },
-  "notes": "IMDuel on Ethereum (chain 1): chess played by trades. Constructor arguments in order: manager = $poolManager; engine = 0xc21788f704a8b9456f7391a01d8a3d95be215a27, the ChessEngineV5 from the engine launch (launch/engine.json; not checked in the constructor, so the hook builds where it has no code); imd = IMD 0xd34a99bc0f67ae1bbd63c660e6d0b0dd03e263b7; turnBlocks = 3 (blocks a move takes bids for, about 36 s). No owner, admin, pause, upgrade path or backend signer. The token is src/IMDuelToken.sol: 1,000,000,000 fixed, 18 decimals, all minted to the factory, plain transfers, no owner, mint, burn, tax, pause or blocklist. The factory deploys the hook and the token and opens the pool (IMD pair, fee 12500, spacing 60) in one transaction: the first pool opened is the main duel and must pair IMD (afterInitialize reverts otherwise); its other currency is $IMDUEL. Every later duel must pair IMD or $IMDUEL (NoRoute otherwise). Fee: 0.75% of every swap via beforeSwapReturnDelta/afterSwapReturnDelta, on top of the 1.25% LP fee, reading no price: 0.65% fills the two pots, half from each side of the trade into that token's pot; 0.1% is taken in $IMDUEL where the pool holds it and owed to 0x...dEaD (anyone's withdraw(0x...dEaD, $IMDUEL) burns it), else in IMD into the main duel's IMD pot. No opening surcharge. Each swap the hook takes a fee from emits URC-2's HookSwap (7,500 pips). A swap must trade its whole order (PartialFill). Play: every buy bids for its team's next move; its owner is the hookData address (20 bytes packed or 32 ABI-encoded; zero, the hook, the PoolManager or 0x...dEaD count as none), else tx.origin (a relayed smart-wallet trade without hookData credits the relayer: accepted). The biggest bid owns the move; a new top must pay over 10% more. Strength is what the trade received as a share of its team's pot (0% at 0.1%, 90% from the whole pot; an empty pot plays at the cap). A move takes bids for 3 blocks after the previous one (a first bid in or after the last block opens 3 blocks from it); the first swap after the window plays it through a gas-capped engine call seeded by the hash of the window's last block (BLOCKHASH or EIP-2935; a hash no longer served replays the bid for nobody). A failing engine never reverts a swap: a seeded legal move plays at 0%, else the game ends as a draw; a swap starving the engine reverts (NotEnoughGas). A side silent 600 s plays at 0% when the other side trades. Accepted: the builder of a window's last block can bid in it and grind its hash. Only checkmate pays: the mating move's owner gets the least of a quarter of the losing team's pot, twice its bid (PAYOUT_CAP) and that game's pot fees into the losing pot (MATE_INFLOW_CAP 1, gameInflow), in the loser's token. Captures, checks, draws and timeout moves pay nothing; pots carry over. Rewards are owed and claimed (withdraw(who, c) by anyone, paid to who; withdrawTo(c, to) by the owner, never to 0, the hook or the manager; a claim leaves 1 wei); no transfer ever happens in a trade. fundChest(key, inCurrency1, amount) adds to a pot (never as inflow); a pot holds at most 2^128 - 1. previewMove(poolId, hash) gives a closed window's move. Per-address play counts (stats, players) in the main duel only, for display: they never pay or limit anything. Audited by the swarm (jobs 6acefe89, 74895075; findings fixed or documented)."
+  "kind": "evm_contracts",
+  "contracts": [
+    {
+      "contract": "IMDuelStaking",
+      "constructorArgs": [
+        "0xc012b8Db13C57beCd950eEfB70540e6f973A3C73"
+      ]
+    },
+    {
+      "contract": "IMDuelFeeRouter",
+      "constructorArgs": [
+        "0x12C63b581d07093F6126bc02263c58f7EadaA96F",
+        "2843",
+        "0xc012b8Db13C57beCd950eEfB70540e6f973A3C73",
+        "0xD34a99Bc0f67aE1bbd63C660e6d0b0dd03E263B7",
+        "$contract:IMDuelStaking",
+        "0x6AA302EFf055259c9Cf177f33Ae3cBA5d4135B23",
+        "0x6AA302EFf055259c9Cf177f33Ae3cBA5d4135B23"
+      ]
+    }
+  ],
+  "notes": "IMDuel's $IMDUEL staking on Ethereum (chain 1), beside the live main duel (IMD launch 2843; hook 0xA92F72DcDd90229C32F6d51229F4cc5c916410CC). IMDuelStaking: OpenZeppelin 5.0.2 ERC-4626 over $IMDUEL (0xc012b8Db13C57beCd950eEfB70540e6f973A3C73), shares sIMDUEL; no owner, admin, pause or upgrade; nothing adjustable. IMDuelFeeRouter: factory 0x12C63b581d07093F6126bc02263c58f7EadaA96F, launch 2843, $IMDUEL, IMD 0xD34a99Bc0f67aE1bbd63C660e6d0b0dd03E263B7, the vault deployed just before it, team and admin the launch wallet 0x6AA302EFf055259c9Cf177f33Ae3cBA5d4135B23. Its constructor checks the launch's pool pairs exactly $IMDUEL and IMD, that the pool's hook names them, that the vault's asset is $IMDUEL, and calls the vault's public sync(); a wrong argument reverts the deployment. No ETH is sent and no call is made after deployment: the launch wallet then funds the vault and hands the launch's requester to the router itself."
 }

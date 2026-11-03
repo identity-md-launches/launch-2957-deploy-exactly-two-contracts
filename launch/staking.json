@@ -1,0 +1,19 @@
+{
+  "kind": "evm_contracts",
+  "contracts": [
+    { "contract": "IMDuelStaking", "constructorArgs": ["0xc012b8Db13C57beCd950eEfB70540e6f973A3C73"] },
+    {
+      "contract": "IMDuelFeeRouter",
+      "constructorArgs": [
+        "0x12C63b581d07093F6126bc02263c58f7EadaA96F",
+        "2843",
+        "0xc012b8Db13C57beCd950eEfB70540e6f973A3C73",
+        "0xD34a99Bc0f67aE1bbd63C660e6d0b0dd03E263B7",
+        "$contract:IMDuelStaking",
+        "0x6AA302EFf055259c9Cf177f33Ae3cBA5d4135B23",
+        "0x6AA302EFf055259c9Cf177f33Ae3cBA5d4135B23"
+      ]
+    }
+  ],
+  "notes": "IMDuel's $IMDUEL staking on Ethereum (chain 1), beside the live main duel (IMD launch 2843; hook 0xA92F72DcDd90229C32F6d51229F4cc5c916410CC). IMDuelStaking: OpenZeppelin 5.0.2 ERC-4626 over $IMDUEL (0xc012b8Db13C57beCd950eEfB70540e6f973A3C73), shares sIMDUEL; no owner, admin, pause or upgrade; nothing adjustable. IMDuelFeeRouter: factory 0x12C63b581d07093F6126bc02263c58f7EadaA96F, launch 2843, $IMDUEL, IMD 0xD34a99Bc0f67aE1bbd63C660e6d0b0dd03E263B7, the vault deployed just before it, team and admin the launch wallet 0x6AA302EFf055259c9Cf177f33Ae3cBA5d4135B23. Its constructor checks the launch's pool pairs exactly $IMDUEL and IMD, that the pool's hook names them, that the vault's asset is $IMDUEL, and calls the vault's public sync(); a wrong argument reverts the deployment. No ETH is sent and no call is made after deployment: the launch wallet then funds the vault and hands the launch's requester to the router itself."
+}
