@@ -1,0 +1,1 @@
+import{s as e}from"./controls-BHCuqmWb.js";/* empty css                 */var t=()=>e`<span class="skeleton-line" aria-hidden="true"></span>`;function n(e,t){e.dataset.pending=String(t),e.setAttribute(`aria-busy`,String(t)),e.inert=t}export{t as n,n as t};
