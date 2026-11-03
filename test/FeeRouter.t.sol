@@ -142,7 +142,11 @@ contract FeeRouterTest is Test {
         assertEq(vault.reserve(), 2_000_000e18 - 1e18, "it joins the vault's reserve");
         assertEq(vault.totalAssets(), 1e18);
         _wait(1 days);
-        assertLt(vault.reserve(), 2_000_000e18 - 1e18, "and starts releasing at once (the router syncs)");
+        assertEq(vault.reserve(), 2_000_000e18 - 1e18, "the dead stake alone: the reserve waits");
+        imduel.approve(address(vault), 1e18);
+        vault.deposit(1e18, address(this));
+        _wait(1 days);
+        assertLt(vault.reserve(), 2_000_000e18 - 1e18, "with a staker it releases"); 
         assertEq(imd.balanceOf(address(router)) + imduel.balanceOf(address(router)), 0, "the router keeps nothing");
     }
 
@@ -175,6 +179,39 @@ contract FeeRouterTest is Test {
         vm.prank(anyone);
         vm.expectRevert(IMDuelFeeRouter.NotAdmin.selector);
         router.handOn();
+    }
+
+    /// The swarm audit's second low (job d944c9f4): a proposal is good for NOTICE once it has waited one out; a stale
+    /// one gives no fresh notice, so it must be proposed again (and waited out again).
+    function test_aStaleProposalExpires() public {
+        _handOver();
+        vm.prank(admin);
+        router.propose(nextRouter);
+        _wait(3 days + 3 days + 1);
+        vm.prank(admin);
+        vm.expectRevert(IMDuelFeeRouter.Expired.selector);
+        router.handOn();
+        vm.prank(admin);
+        router.propose(nextRouter); // proposed again: a fresh notice
+        _wait(3 days - 1);
+        vm.prank(admin);
+        vm.expectRevert(IMDuelFeeRouter.NotReady.selector);
+        router.handOn();
+        _wait(1);
+        vm.prank(admin);
+        router.handOn();
+        assertEq(factory.requester(LAUNCH), nextRouter);
+    }
+
+    /// The window's last second still works.
+    function test_aProposalWorksToTheEndOfItsWindow() public {
+        _handOver();
+        vm.prank(admin);
+        router.propose(nextRouter);
+        _wait(3 days + 3 days);
+        vm.prank(admin);
+        router.handOn();
+        assertEq(factory.requester(LAUNCH), nextRouter);
     }
 
     function test_aHandoffWaitsThreeDaysAndCollectsFirst() public {

@@ -31,8 +31,8 @@ interface ISync {
 
 /// The main duel's 1%: as the launch's requester it receives the 1% of every
 /// trade, and anyone's `collect` sends the $IMDUEL to the staking vault (joining its reserve) and the IMD to the team.
-/// The admin can hand the requester on (a new router, a new split) once a proposal has waited out NOTICE, and can
-/// give up that power for good (`lock`). Nothing else is adjustable.
+/// The admin can hand the requester on (a new router, a new split) in the NOTICE after a proposal has waited one
+/// out, and can give up that power for good (`lock`). Nothing else is adjustable.
 contract IMDuelFeeRouter {
     using SafeERC20 for IERC20;
 
@@ -56,6 +56,7 @@ contract IMDuelFeeRouter {
     error InvalidSetup();
     error NotAdmin();
     error NotReady();
+    error Expired();
 
     /// Checks its own wiring against the live contracts: the launch's pool pairs exactly these two tokens, which its
     /// hook names $IMDUEL and IMD; the vault stakes $IMDUEL and syncs; the team is neither the vault nor nobody.
@@ -80,8 +81,8 @@ contract IMDuelFeeRouter {
         return _collect();
     }
 
-    /// Proposes `next` as the launch's requester, ready after NOTICE; a new proposal restarts the notice, and
-    /// address 0 withdraws it.
+    /// Proposes `next` as the launch's requester, ready after NOTICE and for NOTICE after that (then it must be
+    /// proposed again); a new proposal restarts the notice, and address 0 withdraws it.
     function propose(address next) external {
         _onlyAdmin();
         uint64 at = next == address(0) ? 0 : uint64(block.timestamp + NOTICE);
@@ -89,11 +90,13 @@ contract IMDuelFeeRouter {
         emit Proposed(next, at);
     }
 
-    /// Hands the requester to the proposal once its notice has run, after collecting what this router's split is owed.
+    /// Hands the requester to the proposal once its notice has run and before it goes stale (NOTICE later), after
+    /// collecting what this router's split is owed.
     function handOn() external {
         _onlyAdmin();
         address next = pending;
         if (next == address(0) || block.timestamp < readyAt) revert NotReady();
+        if (block.timestamp > readyAt + NOTICE) revert Expired(); // a stale proposal gives no fresh notice: propose again
         _collect();
         (pending, readyAt) = (address(0), 0);
         factory.setRequester(launchNumber, next);

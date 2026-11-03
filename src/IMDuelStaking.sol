@@ -9,7 +9,8 @@ import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.so
 /// ERC-4626: stake $IMDUEL for sIMDUEL, whose worth in $IMDUEL rises every second, with nothing to claim. Rewards
 /// come from a reserve: any $IMDUEL sent to the vault joins it, and it releases 1% of itself a day, per second, into
 /// what the shares are worth. The first sync after the reserve holds DEAD_ASSETS stakes them for 0x...dEaD, a stake
-/// that can never leave, so the vault is never empty: until then deposits are closed and nothing is released. Shares
+/// that can never leave, so the vault is never empty: until then deposits are closed. The reserve releases only while
+/// someone else is staked too (more shares than the dead stake's), so it never pays a dead stake alone. Shares
 /// have $IMDUEL's 18 decimals (no offset: the dead stake's 1e18 shares are what keep rounding to dust). No owner,
 /// nothing adjustable; leave any time, no fee.
 contract IMDuelStaking is ERC4626 {
@@ -80,11 +81,13 @@ contract IMDuelStaking is ERC4626 {
         _pool = _now();
     }
 
-    /// The pool once the release so far is worked out: nothing is released until there are shares. $IMDUEL that
-    /// arrived since the last action joins the reserve after the release so far.
+    /// The pool once the release so far is worked out: nothing is released while no shares but the dead stake's exist
+    /// (the supply changes only by a deposit or a withdrawal, each of which settles first, so a release is never cut
+    /// short or backdated); the reserve waits. $IMDUEL that arrived since the last action joins the reserve after the
+    /// release so far.
     function _now() private view returns (Pool memory p) {
         p = _pool;
-        if (totalSupply() != 0) {
+        if (totalSupply() > DEAD_ASSETS) {
             uint256 release = p.reserve - p.reserve * _keep(block.timestamp - p.updated) / ONE;
             (p.reserve, p.staked) = (p.reserve - uint128(release), p.staked + uint128(release));
         }

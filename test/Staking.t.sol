@@ -100,13 +100,14 @@ contract StakingTest is StakingBase {
 
     function test_releaseIsOnePercentADay() public {
         _open(SEED);
+        _stake(alice, 1e18); // someone besides the dead stake: the release runs
         uint256 expected = SEED - 1e18;
         for (uint256 d = 1; d <= 30; d++) {
             _wait(DAY);
             expected = expected * 99 / 100;
             assertApproxEqRel(vault.reserve(), expected, 1e3, "1% a day, compounded"); // within 1e-15
         }
-        assertEq(vault.totalAssets() + vault.reserve(), SEED, "released into the stake, nowhere else");
+        assertEq(vault.totalAssets() + vault.reserve(), SEED + 1e18, "released into the stake, nowhere else");
     }
 
     function test_theReleaseDependsOnlyOnTime() public {
@@ -139,11 +140,45 @@ contract StakingTest is StakingBase {
         assertEq(vault.totalAssets() + vault.reserve(), SEED);
     }
 
-    function test_theDeadStakeTakesTheReleaseWhileAlone() public {
+    /// The swarm audit's first low (job d944c9f4): the dead stake alone is paid nothing; the reserve waits, and the
+    /// first staker earns from when they stake, not the wait before.
+    function test_theReserveWaitsWhileTheDeadStakeIsAlone() public {
         _open(SEED);
         _wait(DAY);
-        assertApproxEqRel(vault.totalAssets(), 1e18 + (SEED - 1e18) / 100, 1e3);
-        assertApproxEqAbs(_value(DEAD), vault.totalAssets(), 1e12, "all of it is the dead stake's: locked for good");
+        assertEq(vault.totalAssets(), 1e18, "nothing released to the dead stake alone");
+        assertEq(vault.reserve(), SEED - 1e18, "the reserve waits");
+        _stake(alice, 1_000_000e18);
+        assertApproxEqRel(_value(alice), 1_000_000e18, 1e9, "no backlog for the first staker");
+        _wait(DAY);
+        assertApproxEqRel(_value(alice) - 1_000_000e18, (SEED - 1e18) / 100, 1e12, "then a day's 1%, almost all hers");
+    }
+
+    /// Everyone but the dead stake leaves: the reserve waits again (the audit's state b, seven days).
+    function test_theReserveWaitsWhenEveryStakerLeaves() public {
+        _open(SEED);
+        _stake(alice, 1_000_000e18);
+        _wait(DAY);
+        _leave(alice);
+        uint256 reserve = vault.reserve();
+        uint256 dead = _value(DEAD);
+        _wait(7 * DAY);
+        assertEq(vault.reserve(), reserve, "nothing released while nobody redeemable is staked");
+        assertEq(_value(DEAD), dead);
+    }
+
+    /// Shares sent to 0x...dEaD don't change the supply, so the release goes on and no figure jumps (the swarm's
+    /// suggested balanceOf(DEAD) gate would have dropped the release since the last action here, a share's worth with it).
+    function test_sharesSentToDeadDontStopTheRelease() public {
+        _open(SEED);
+        _stake(alice, 1_000_000e18);
+        _wait(DAY);
+        uint256 price = vault.convertToAssets(1e18);
+        uint256 shares = vault.balanceOf(alice);
+        vm.prank(alice);
+        vault.transfer(DEAD, shares);
+        assertEq(vault.convertToAssets(1e18), price, "the same worth after the transfer");
+        _wait(DAY);
+        assertGt(vault.convertToAssets(1e18), price, "and the release goes on");
     }
 
     // ── Stakers ──
@@ -337,7 +372,7 @@ contract StakingTest is StakingBase {
         _wait(1 hours);
         g = gasleft();
         vault.deposit(1e24, alice);
-        assertLt(g - gasleft(), 70_000, "a later stake");
+        assertLt(g - gasleft(), 80_000, "a later stake"); // forge 1.8.3 measures 73,354 (swarm audit d944c9f4)
         g = gasleft();
         vault.transfer(bob, 1e18);
         assertLt(g - gasleft(), 40_000, "moving shares");
