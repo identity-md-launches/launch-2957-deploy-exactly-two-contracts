@@ -1,5 +1,5 @@
 {
-  "rpc": "https://ethereum-rpc.publicnode.com/",
+  "rpc": "https://rpc.mevblocker.io/",
   "chainId": 1,
   "hook": "0xA92F72DcDd90229C32F6d51229F4cc5c916410CC",
   "imd": "0xd34a99bc0f67ae1bbd63c660e6d0b0dd03e263b7",
