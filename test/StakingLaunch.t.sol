@@ -3,6 +3,7 @@ pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {PoolKey} from "v4-core/src/types/PoolKey.sol";
 import {IMDuelStaking} from "../src/IMDuelStaking.sol";
 import {IMDuelFeeRouter, IPoolFees} from "../src/IMDuelFeeRouter.sol";
 
@@ -30,6 +31,18 @@ contract StakingLaunchTest is Test {
     address constant IMDUEL = 0xc012b8Db13C57beCd950eEfB70540e6f973A3C73;
     address constant IMD = 0xD34a99Bc0f67aE1bbd63C660e6d0b0dd03E263B7;
     address constant WALLET = 0x6AA302EFf055259c9Cf177f33Ae3cBA5d4135B23;
+    address constant HOOK = 0xA92F72DcDd90229C32F6d51229F4cc5c916410CC;
+
+    /// Share the existing fork suite's opt-in setting. A supplied endpoint that fails or points to an empty
+    /// chain must fail setup, not turn a requested live rehearsal into a skipped test.
+    function setUp() public {
+        string memory rpc = vm.envOr("ETH_RPC", string(""));
+        if (bytes(rpc).length != 0) {
+            vm.createSelectFork(rpc);
+            assertEq(block.chainid, 1);
+            assertGt(FACTORY.code.length, 0, "the supplied mainnet fork must contain LaunchFactory");
+        }
+    }
 
     /// Imported audit e1d42d70: this failure is deliberate under the task's mainnet-only constructor requirement.
     function test_emptyChainCannotSubstituteForMainnet() public {
@@ -49,6 +62,12 @@ contract StakingLaunchTest is Test {
             return;
         }
         assertEq(block.chainid, 1);
+        (PoolKey memory key,,,) = IPoolFees(FACTORY).positionOf(2843);
+        assertEq(address(key.hooks), HOOK, "the manifest must point at the existing main duel");
+        bytes32 factoryCode = FACTORY.codehash;
+        bytes32 hookCode = HOOK.codehash;
+        bytes32 tokenCode = IMDUEL.codehash;
+        bytes32 imdCode = IMD.codehash;
         StakingLaunchProbe probe = new StakingLaunchProbe();
         (IMDuelStaking vault, IMDuelFeeRouter router) = probe.deploy();
         assertEq(vault.asset(), IMDUEL);
@@ -62,6 +81,16 @@ contract StakingLaunchTest is Test {
         assertEq(router.admin(), WALLET);
         assertTrue(router.admin() != address(probe));
         assertEq(vault.totalSupply(), 0);
+        assertEq(vault.maxDeposit(WALLET), 0, "launch does not seed the vault on the owner's behalf");
+        assertEq(address(vault).balance, 0);
+        assertEq(address(router).balance, 0);
+        assertEq(FACTORY.codehash, factoryCode);
+        assertEq(HOOK.codehash, hookCode);
+        assertEq(IMDUEL.codehash, tokenCode);
+        assertEq(IMD.codehash, imdCode);
+        vm.prank(address(probe));
+        vm.expectRevert(IMDuelFeeRouter.NotAdmin.selector);
+        router.propose(WALLET);
         _checkRuntime(address(vault));
         _checkRuntime(address(router));
     }
