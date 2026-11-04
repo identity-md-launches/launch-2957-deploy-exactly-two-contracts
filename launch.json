@@ -15,10 +15,10 @@
         "0xc012b8Db13C57beCd950eEfB70540e6f973A3C73",
         "0xD34a99Bc0f67aE1bbd63C660e6d0b0dd03E263B7",
         "$contract:IMDuelStaking",
-        "0x6AA302EFf055259c9Cf177f33Ae3cBA5d4135B23",
-        "0x6AA302EFf055259c9Cf177f33Ae3cBA5d4135B23"
+        "$owner",
+        "$owner"
       ]
     }
   ],
-  "notes": "IMDuel's $IMDUEL staking on Ethereum (chain 1), beside the live main duel (IMD launch 2843; hook 0xA92F72DcDd90229C32F6d51229F4cc5c916410CC). IMDuelStaking: OpenZeppelin 5.0.2 ERC-4626 over $IMDUEL (0xc012b8Db13C57beCd950eEfB70540e6f973A3C73), shares sIMDUEL; no owner, admin, pause or upgrade; nothing adjustable. IMDuelFeeRouter: factory 0x12C63b581d07093F6126bc02263c58f7EadaA96F, launch 2843, $IMDUEL, IMD 0xD34a99Bc0f67aE1bbd63C660e6d0b0dd03E263B7, the vault deployed just before it, team and admin the launch wallet 0x6AA302EFf055259c9Cf177f33Ae3cBA5d4135B23. Its constructor checks the launch's pool pairs exactly $IMDUEL and IMD, that the pool's hook names them, that the vault's asset is $IMDUEL, and calls the vault's public sync(); a wrong argument reverts the deployment. No ETH is sent and no call is made after deployment: the launch wallet then funds the vault and hands the launch's requester to the router itself."
+  "notes": "Contracts-only Ethereum mainnet launch: deploy src/IMDuelStaking.sol, then src/IMDuelFeeRouter.sol. IMDuelStaking is an ownerless OpenZeppelin 5.0.2 ERC-4626 vault over the live $IMDUEL token, issuing sIMDUEL shares. Reserve release is scaled by the fraction of shares outside the dead stake and stops when no redeemable shares remain. IMDuelFeeRouter uses the live LaunchFactory and launch 2843; it forwards $IMDUEL fees to the new vault and IMD fees to $owner, who is also its explicit admin. The admin may hand over the requester role after three days, through the end of the following three days, or permanently renounce that power with lock(). The router constructor reads positionOf(2843), the existing pool hook's imduel()/imd(), and the new vault's asset()/sync(); deployment and rehearsal require mainnet state with the live dependencies intact. The existing hook is 0xA92F72DcDd90229C32F6d51229F4cc5c916410CC. This manifest deploys only the vault and router, with zero ETH and no initialization calls. After deployment, vault funding and sync to establish the dead stake are separate actions; the current launch requester must separately transfer its requester role to the router before it receives the launch's fees."
 }
