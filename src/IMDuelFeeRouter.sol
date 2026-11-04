@@ -60,7 +60,15 @@ contract IMDuelFeeRouter {
 
     /// Checks its own wiring against the live contracts: the launch's pool pairs exactly these two tokens, which its
     /// hook names $IMDUEL and IMD; the vault stakes $IMDUEL and syncs; the team is neither the vault nor nobody.
-    constructor(IPoolFees factory_, uint64 launchNumber_, IERC20 imduel_, IERC20 imd_, address vault_, address team_, address admin_) {
+    constructor(
+        IPoolFees factory_,
+        uint64 launchNumber_,
+        IERC20 imduel_,
+        IERC20 imd_,
+        address vault_,
+        address team_,
+        address admin_
+    ) {
         (PoolKey memory key,,,) = factory_.positionOf(launchNumber_);
         (address c0, address c1) = (Currency.unwrap(key.currency0), Currency.unwrap(key.currency1));
         bool paired = (c0 == address(imduel_) && c1 == address(imd_)) || (c0 == address(imd_) && c1 == address(imduel_));
@@ -73,7 +81,7 @@ contract IMDuelFeeRouter {
         ) revert InvalidSetup();
         ISync(vault_).sync(); // a vault that can't sync would trap every collect
         (factory, launchNumber, imduel, imd, vault, team, admin) =
-            (factory_, launchNumber_, imduel_, imd_, vault_, team_, admin_);
+        (factory_, launchNumber_, imduel_, imd_, vault_, team_, admin_);
     }
 
     /// Claims the launch's fees and forwards everything held: $IMDUEL to the vault, IMD to the team (anyone).
@@ -82,9 +90,11 @@ contract IMDuelFeeRouter {
     }
 
     /// Proposes `next` as the launch's requester, ready after NOTICE and for NOTICE after that (then it must be
-    /// proposed again); a new proposal restarts the notice, and address 0 withdraws it.
+    /// proposed again); a new proposal restarts the notice, and address 0 withdraws it. The vault cannot receive
+    /// the requester role: it cannot move the IMD fees that would then be paid to it.
     function propose(address next) external {
         _onlyAdmin();
+        if (next == vault) revert InvalidSetup();
         uint64 at = next == address(0) ? 0 : uint64(block.timestamp + NOTICE);
         (pending, readyAt) = (next, at);
         emit Proposed(next, at);

@@ -146,7 +146,7 @@ contract FeeRouterTest is Test {
         imduel.approve(address(vault), 1e18);
         vault.deposit(1e18, address(this));
         _wait(1 days);
-        assertLt(vault.reserve(), 2_000_000e18 - 1e18, "with a staker it releases"); 
+        assertLt(vault.reserve(), 2_000_000e18 - 1e18, "with a staker it releases");
         assertEq(imd.balanceOf(address(router)) + imduel.balanceOf(address(router)), 0, "the router keeps nothing");
     }
 
@@ -179,6 +179,42 @@ contract FeeRouterTest is Test {
         vm.prank(anyone);
         vm.expectRevert(IMDuelFeeRouter.NotAdmin.selector);
         router.handOn();
+    }
+
+    /// Imported audit 51df66ae: handing the requester to the vault would strand every subsequent IMD fee.
+    function test_theVaultCannotBeProposedAsRequester() public {
+        _handOver();
+        vm.prank(admin);
+        vm.expectRevert(IMDuelFeeRouter.InvalidSetup.selector);
+        router.propose(address(vault));
+        assertEq(router.pending(), address(0));
+        assertEq(router.readyAt(), 0);
+        _wait(3 days);
+        vm.prank(admin);
+        vm.expectRevert(IMDuelFeeRouter.NotReady.selector);
+        router.handOn();
+        factory.accrue(1e18, 1e18);
+        router.collect();
+        assertEq(factory.requester(LAUNCH), address(router));
+        assertEq(imd.balanceOf(address(vault)), 0);
+        assertEq(imd.balanceOf(team), 1e18);
+    }
+
+    function test_aRejectedVaultProposalPreservesAnExistingProposal() public {
+        _handOver();
+        vm.prank(admin);
+        router.propose(nextRouter);
+        uint64 ready = router.readyAt();
+        _wait(1 days);
+        vm.prank(admin);
+        vm.expectRevert(IMDuelFeeRouter.InvalidSetup.selector);
+        router.propose(address(vault));
+        assertEq(router.pending(), nextRouter);
+        assertEq(router.readyAt(), ready);
+        _wait(2 days);
+        vm.prank(admin);
+        router.handOn();
+        assertEq(factory.requester(LAUNCH), nextRouter);
     }
 
     /// The swarm audit's second low (job d944c9f4): a proposal is good for NOTICE once it has waited one out; a stale

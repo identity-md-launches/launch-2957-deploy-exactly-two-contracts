@@ -98,14 +98,16 @@ contract StakingTest is StakingBase {
 
     // ── The release ──
 
-    function test_releaseIsOnePercentADay() public {
+    function test_releaseScalesThePerSecondRateByRedeemableShares() public {
         _open(SEED);
-        _stake(alice, 1e18); // someone besides the dead stake: the release runs
+        _stake(alice, 1e18); // half of the shares can redeem: half of the base per-second rate
         uint256 expected = SEED - 1e18;
+        // Independently evaluated with 80-digit decimal arithmetic: (1 - (1 - KEEP) / 2)^86400, in 1e27.
+        uint256 dailyKeep = 994987437252023507328880933;
         for (uint256 d = 1; d <= 30; d++) {
             _wait(DAY);
-            expected = expected * 99 / 100;
-            assertApproxEqRel(vault.reserve(), expected, 1e3, "1% a day, compounded"); // within 1e-15
+            expected = expected * dailyKeep / 1e27;
+            assertApproxEqRel(vault.reserve(), expected, 1e3, "scaled rate, compounded"); // within 1e-15
         }
         assertEq(vault.totalAssets() + vault.reserve(), SEED + 1e18, "released into the stake, nowhere else");
     }
@@ -115,6 +117,9 @@ contract StakingTest is StakingBase {
         token.transfer(address(once), SEED);
         once.sync();
         _open(SEED);
+        _stake(alice, 1e18);
+        token.approve(address(once), 1e18);
+        once.deposit(1e18, alice);
         for (uint256 i; i < 24 * 7; i++) {
             _wait(1 hours - 7);
             vault.sync();
@@ -131,13 +136,16 @@ contract StakingTest is StakingBase {
         token.transfer(address(once), SEED);
         once.sync();
         _open(SEED);
+        _stake(alice, 1e18);
+        token.approve(address(once), 1e18);
+        once.deposit(1e18, alice);
         _wait(a);
         vault.sync();
         uint256 middle = vault.reserve();
         _wait(b);
         assertApproxEqAbs(vault.reserve(), once.reserve(), 1e3, "two steps or one");
         assertLe(vault.reserve(), middle);
-        assertEq(vault.totalAssets() + vault.reserve(), SEED);
+        assertEq(vault.totalAssets() + vault.reserve(), SEED + 1e18);
     }
 
     /// The swarm audit's first low (job d944c9f4): the dead stake alone is paid nothing; the reserve waits, and the
@@ -150,7 +158,9 @@ contract StakingTest is StakingBase {
         _stake(alice, 1_000_000e18);
         assertApproxEqRel(_value(alice), 1_000_000e18, 1e9, "no backlog for the first staker");
         _wait(DAY);
-        assertApproxEqRel(_value(alice) - 1_000_000e18, (SEED - 1e18) / 100, 1e12, "then a day's 1%, almost all hers");
+        uint256 release = SEED - 1e18 - vault.reserve();
+        assertApproxEqRel(release, (SEED - 1e18) / 100, 1e12, "near the base rate with a million tokens staked");
+        assertApproxEqRel(_value(alice) - 1_000_000e18, release * 1e6 / (1e6 + 1), 1e9, "her share of the release");
     }
 
     /// Everyone but the dead stake leaves: the reserve waits again (the audit's state b, seven days).
@@ -166,9 +176,8 @@ contract StakingTest is StakingBase {
         assertEq(_value(DEAD), dead);
     }
 
-    /// Shares sent to 0x...dEaD don't change the supply, so the release goes on and no figure jumps (the swarm's
-    /// suggested balanceOf(DEAD) gate would have dropped the release since the last action here, a share's worth with it).
-    function test_sharesSentToDeadDontStopTheRelease() public {
+    /// Settle before the transfer: the accrued release stays, then the reserve waits while nobody can redeem.
+    function test_sharesSentToDeadSettleThenStopTheRelease() public {
         _open(SEED);
         _stake(alice, 1_000_000e18);
         _wait(DAY);
@@ -177,8 +186,10 @@ contract StakingTest is StakingBase {
         vm.prank(alice);
         vault.transfer(DEAD, shares);
         assertEq(vault.convertToAssets(1e18), price, "the same worth after the transfer");
+        uint256 reserve = vault.reserve();
         _wait(DAY);
-        assertGt(vault.convertToAssets(1e18), price, "and the release goes on");
+        assertEq(vault.convertToAssets(1e18), price, "no release to the dead stake alone");
+        assertEq(vault.reserve(), reserve);
     }
 
     // ── Stakers ──
@@ -189,7 +200,8 @@ contract StakingTest is StakingBase {
         _stake(bob, 1_000_000e18);
         uint256 reserve = vault.reserve();
         _wait(DAY);
-        uint256 release = reserve / 100;
+        uint256 release = reserve - vault.reserve();
+        assertApproxEqRel(release, reserve / 100, 1e12, "near the base rate with four million tokens staked");
         uint256 all = 4_000_000e18 + 1e18;
         assertApproxEqRel(_value(alice) - 3_000_000e18, release * 3_000_000e18 / all, 1e9);
         assertApproxEqRel(_value(bob) - 1_000_000e18, release * 1_000_000e18 / all, 1e9);
@@ -235,8 +247,10 @@ contract StakingTest is StakingBase {
         assertEq(vault.reserve(), reserve + 5_000_000e18);
         vault.sync(); // a top-up starts releasing at the next action (the router syncs after forwarding)
         _wait(DAY);
-        // all but the dead stake's 1 / (1M + 1) of the day's 1%
-        assertApproxEqRel(_value(alice) - before, (reserve + 5_000_000e18) / 100 * 1e6 / (1e6 + 1), 1e9);
+        // The new reserve releases at the scaled rate, and every share gets the same fraction of that release.
+        uint256 release = reserve + 5_000_000e18 - vault.reserve();
+        assertApproxEqRel(release, (reserve + 5_000_000e18) / 100, 1e12);
+        assertApproxEqRel(_value(alice) - before, release * 1e6 / (1e6 + 1), 1e9);
     }
 
     /// The classic donation attack has nothing to work on: a plain transfer never touches what a share is worth.
@@ -379,7 +393,7 @@ contract StakingTest is StakingBase {
         _wait(1 hours);
         g = gasleft();
         vault.redeem(shares, alice, alice);
-        assertLt(g - gasleft(), 90_000, "leaving");
+        assertLt(g - gasleft(), 95_000, "leaving"); // 92,084 with the dead-balance read and scaled rate (audit 836357b2)
         vm.stopPrank();
     }
 }
@@ -479,8 +493,8 @@ contract StakingInvariantTest is StakingBase {
     /// Everything the vault holds is what the shares are worth plus the reserve; no $IMDUEL appears or disappears.
     function invariant_everyWeiIsAccountedFor() public view {
         assertEq(token.balanceOf(address(vault)), vault.totalAssets() + vault.reserve());
-        uint256 sum = token.balanceOf(address(this)) + token.balanceOf(address(handler)) + token.balanceOf(address(vault))
-            + token.balanceOf(DEAD);
+        uint256 sum = token.balanceOf(address(this)) + token.balanceOf(address(handler))
+            + token.balanceOf(address(vault)) + token.balanceOf(DEAD);
         for (uint256 i; i < 4; i++) {
             sum += token.balanceOf(handler.actors(i));
         }
